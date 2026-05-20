@@ -34,7 +34,66 @@ export function TradesTable({ limit = 20 }: { limit?: number }) {
         <h2 className="text-sm uppercase tracking-wider text-gray-400">Recent trades</h2>
         <span className="text-xs text-gray-500">{data?.length ?? 0} shown</span>
       </div>
-      <div className="overflow-x-auto">
+
+      {/* Mobile: card list */}
+      <ul className="md:hidden divide-y divide-bg-accent/40">
+        {data?.map((t) => {
+          const pnlClass =
+            t.pnl == null
+              ? 'text-gray-300'
+              : t.pnl >= 0
+              ? 'text-green-400'
+              : 'text-red-400';
+          return (
+            <li
+              key={t.id}
+              onClick={() => router.push(`/trades/${t.id}`)}
+              className="py-2.5 cursor-pointer active:bg-bg-accent/40"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-gray-500">#{t.id}</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      t.side === 'BUY'
+                        ? 'bg-green-500/20 text-green-300'
+                        : 'bg-red-500/20 text-red-300'
+                    }`}
+                  >
+                    {t.side}
+                  </span>
+                  <span className="text-[10px] text-gray-500">{t.status}</span>
+                </div>
+                <span className={`font-mono text-sm font-semibold ${pnlClass}`}>
+                  {t.pnl != null
+                    ? `${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)} $`
+                    : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-400 font-mono">
+                <span>
+                  {t.entry_price.toFixed(2)} → {t.exit_price?.toFixed(2) ?? '—'}
+                </span>
+                <span className="text-[10px]">
+                  conf {t.confidence_score?.toFixed(0) ?? '—'} ·{' '}
+                  {new Date(t.opened_at).toLocaleString([], {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+        {!data?.length && (
+          <li className="py-6 text-center text-gray-500 text-sm">No trades yet.</li>
+        )}
+      </ul>
+
+      {/* Desktop: full table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-xs text-gray-500 uppercase">
             <tr className="border-b border-bg-accent">
@@ -69,7 +128,9 @@ export function TradesTable({ limit = 20 }: { limit?: number }) {
                   <td className="py-1.5 px-2">
                     <span
                       className={`px-1.5 py-0.5 rounded text-xs font-bold ${
-                        t.side === 'BUY' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+                        t.side === 'BUY'
+                          ? 'bg-green-500/20 text-green-300'
+                          : 'bg-red-500/20 text-red-300'
                       }`}
                     >
                       {t.side}

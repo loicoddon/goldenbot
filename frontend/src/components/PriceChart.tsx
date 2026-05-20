@@ -71,12 +71,12 @@ export function PriceChart() {
   });
 
   return (
-    <div className="card h-[420px]">
+    <div className="card h-[320px] md:h-[420px]">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-sm uppercase tracking-wider text-gray-400">XAU/USD</h2>
-        <span className="text-xs text-gray-500">live · TwelveData</span>
+        <span className="text-[10px] md:text-xs text-gray-500">live</span>
       </div>
-      <div ref={containerRef} className="w-full h-[360px]" />
+      <div ref={containerRef} className="w-full h-[260px] md:h-[360px]" />
     </div>
   );
 }

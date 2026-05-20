@@ -70,9 +70,9 @@ function Stat({
       ? 'text-gold'
       : 'text-gray-100';
   return (
-    <div>
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className={`text-lg font-mono ${color}`}>{value}</div>
+    <div className="min-w-0">
+      <div className="text-[10px] md:text-xs text-gray-500 truncate">{label}</div>
+      <div className={`text-sm md:text-lg font-mono ${color} truncate`}>{value}</div>
     </div>
   );
 }

@@ -39,43 +39,43 @@ export function StatusBar() {
   };
 
   return (
-    <div className="card flex flex-wrap items-center gap-4 justify-between">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
+    <div className="card flex flex-wrap items-center gap-3 justify-between">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 shrink-0">
           <span
-            className={`w-3 h-3 rounded-full ${
+            className={`w-2.5 h-2.5 rounded-full ${
               status?.running ? 'bg-green-400 animate-pulse' : 'bg-gray-500'
             }`}
           />
-          <span className="text-sm">
-            {status?.running ? 'Engine running' : 'Engine stopped'}
+          <span className="text-xs md:text-sm">
+            {status?.running ? 'Running' : 'Stopped'}
           </span>
         </div>
-        <div className="text-xs text-gray-400">
-          Last price:{' '}
+        <div className="text-xs text-gray-400 truncate">
+          <span className="hidden sm:inline">Last price:</span>{' '}
           <span className="text-gold font-mono">
             {status?.last_price ? status.last_price.toFixed(2) : '—'}
           </span>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 md:gap-2 shrink-0">
         <button
           disabled={busy || status?.running}
-          className="btn-primary disabled:opacity-40"
+          className="btn-primary text-xs md:text-sm px-2.5 md:px-3 disabled:opacity-40"
           onClick={() => act('start')}
         >
           Start
         </button>
         <button
           disabled={busy || !status?.running}
-          className="btn-danger disabled:opacity-40"
+          className="btn-danger text-xs md:text-sm px-2.5 md:px-3 disabled:opacity-40"
           onClick={() => act('stop')}
         >
           Stop
         </button>
         <button
           disabled={busy}
-          className="btn-ghost disabled:opacity-40"
+          className="btn-ghost text-xs md:text-sm px-2.5 md:px-3 disabled:opacity-40"
           onClick={() => act('restart')}
         >
           Restart
