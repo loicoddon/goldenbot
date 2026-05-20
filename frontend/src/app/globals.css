@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  @apply bg-bg text-gray-100 antialiased min-h-screen;
+}
+
+.card {
+  @apply bg-bg-card border border-bg-accent rounded-xl p-4;
+}
+
+.btn {
+  @apply px-3 py-2 rounded-lg text-sm font-medium transition-colors;
+}
+
+.btn-primary {
+  @apply btn bg-gold text-black hover:bg-gold-dark hover:text-white;
+}
+
+.btn-danger {
+  @apply btn bg-red-500/90 text-white hover:bg-red-600;
+}
+
+.btn-ghost {
+  @apply btn bg-bg-accent text-gray-200 hover:bg-bg-accent/70;
+}

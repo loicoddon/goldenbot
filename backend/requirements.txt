@@ -1,0 +1,30 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# DB
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0
+
+# Redis
+redis==5.2.0
+
+# HTTP / WS clients
+httpx==0.28.1
+websockets==13.1
+aiohttp==3.11.10
+
+# Trading / data
+pandas==2.2.3
+numpy==2.1.3
+
+# AI
+anthropic==0.40.0
+
+# Utils
+python-dotenv==1.0.1
+loguru==0.7.2
+tenacity==9.0.0
+orjson==3.10.12
