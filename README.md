@@ -69,6 +69,52 @@ GoldenBot ships as a Docker Compose stack — same commands work on **macOS** an
 | **Git** | `brew install git` | `apt install git` / `dnf install git` |
 | **(Optional) Ollama for local AI** | `brew install ollama` then `ollama serve` | [Linux installer](https://ollama.com/download/linux): `curl -fsSL https://ollama.com/install.sh \| sh` |
 
+### 💻 Hardware requirements
+
+GoldenBot itself is light — the AI stack is what dictates your RAM needs.
+
+#### Without local AI (`AI_PROVIDER=stub` or `claude`)
+
+The Docker stack (Postgres + Redis + backend + frontend + Discord bot) runs comfortably on:
+
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| **RAM** | 4 GB | 8 GB |
+| **CPU** | 2 cores (x86 / Apple Silicon) | 4+ cores |
+| **Disk** | 5 GB (images + a few weeks of trading data) | 20 GB (long-term history + backtests) |
+| **Network** | broadband | broadband |
+| **OS** | macOS 12+ · Ubuntu 22.04+ · Debian 12+ · Fedora 38+ | same |
+
+> 💡 Use `AI_PROVIDER=claude` if you want quality AI without buying hardware — Claude API runs in the cloud, your machine just needs the Docker stack.
+
+#### With local AI (`AI_PROVIDER=ollama`)
+
+Add the model's footprint to the Docker stack baseline. Pick based on what you have:
+
+| Ollama model | Disk | RAM needed for inference | Total system RAM (with Docker) |
+|--------------|------|--------------------------|-------------------------------|
+| `qwen2.5:3b` | 2 GB | ~3 GB | **8 GB** min · 12 GB rec. |
+| `llama3.1:8b` | 5 GB | ~5 GB | **12 GB** min · 16 GB rec. |
+| `qwen2.5:14b` | 9 GB | ~9 GB | **20 GB** min · **24 GB+** rec. |
+| `qwen2.5:32b` | 20 GB | ~20 GB | **32 GB+** rec. |
+
+**Inference speed**:
+- **Apple Silicon (M1/M2/M3/M4)** : unified memory + Neural Engine make even 14B run smoothly. Best price/perf for this project.
+- **Linux + NVIDIA GPU** : `ollama` auto-uses CUDA. RTX 3060 12 GB handles 8-14B models well.
+- **Linux CPU-only** : works but expect 5-15s per analysis on a 14B model. Consider `qwen2.5:3b` or `llama3.1:8b` instead.
+
+> ⚠️ **Watch out for OOM**: even with 24 GB RAM, running `qwen2.5:14b` alongside Docker Desktop's allocation (typically 8 GB) can leave too little headroom. If you see `model requires more system memory` errors, either drop to a smaller model or raise Docker Desktop's memory limit in its Settings → Resources panel.
+
+#### Network usage
+
+Steady-state per day (1m trading on XAU/USD):
+- **TwelveData WS** : ~5 MB inbound
+- **Finnhub REST** : ~1 MB inbound (calendar + news polls)
+- **Anthropic API** : ~50 KB / trade analysis (Claude only)
+- **Discord** : negligible
+
+Total < **20 MB/day** — runs fine on any home connection.
+
 You'll also need free API keys (all take <2 min to obtain):
 
 | Service | Required? | Where |
