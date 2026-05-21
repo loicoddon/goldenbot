@@ -58,13 +58,17 @@ class TwelveDataFeed(BasePriceFeed):
             data = json.loads(raw)
         except json.JSONDecodeError:
             return
-        if data.get("event") != "price":
-            return
-        try:
-            price = float(data["price"])
-        except (KeyError, ValueError, TypeError):
-            return
-        await self._emit(price)
+        event = data.get("event")
+        if event == "price":
+            try:
+                price = float(data["price"])
+            except (KeyError, ValueError, TypeError):
+                return
+            await self._emit(price)
+        elif event in ("subscribe-status", "heartbeat", None):
+            return  # quiet expected events
+        else:
+            logger.warning("TwelveData WS unexpected payload: {}", str(data)[:200])
 
     async def _rest_poll_loop(self) -> None:
         symbol = settings.twelvedata_symbol
@@ -73,10 +77,23 @@ class TwelveDataFeed(BasePriceFeed):
             while not self._stopping.is_set():
                 try:
                     r = await client.get(
-                        REST_URL, params={"symbol": symbol, "apikey": settings.twelvedata_api_key}
+                        REST_URL,
+                        params={"symbol": symbol, "apikey": settings.twelvedata_api_key},
                     )
                     r.raise_for_status()
                     data = r.json()
+                    # TwelveData returns HTTP 200 with {"code": 429, ...} on quota
+                    # exhaustion and other API errors, so r.raise_for_status() misses them.
+                    if isinstance(data, dict) and (
+                        data.get("status") == "error"
+                        or data.get("code") in (400, 401, 403, 429, 500)
+                    ):
+                        code = data.get("code", "?")
+                        msg = str(data.get("message", ""))[:200]
+                        logger.warning("TwelveData REST API error code={} msg={}", code, msg)
+                        # Long backoff on quota, shorter on transient errors
+                        await asyncio.sleep(60 if code == 429 else 10)
+                        continue
                     if "price" in data:
                         await self._emit(float(data["price"]))
                 except Exception as e:

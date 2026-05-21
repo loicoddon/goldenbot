@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     oanda_account_id: str = Field(default="")
     oanda_env: str = Field(default="practice")  # practice | live
 
+    # Correlated markets feed (DXY, TNX, WTI, SPX via TwelveData)
+    # Disabled by default — these symbols require paid TwelveData plan
+    correlated_feed_enabled: bool = Field(default=False)
+
     # News (Finnhub)
     finnhub_api_key: str = Field(default="")
     news_calendar_poll_interval: int = Field(default=300)

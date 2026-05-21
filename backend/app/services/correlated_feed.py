@@ -35,6 +35,9 @@ class CorrelatedFeed:
         return {sym: data.copy() for sym, data in self._cache.items()}
 
     async def start(self) -> None:
+        if not settings.correlated_feed_enabled:
+            logger.info("Correlated feed disabled by config (CORRELATED_FEED_ENABLED=false)")
+            return
         if not settings.twelvedata_api_key:
             logger.warning("Correlated feed disabled (no TwelveData key)")
             return
@@ -70,14 +73,25 @@ class CorrelatedFeed:
                         params={"symbol": sym, "apikey": settings.twelvedata_api_key},
                     )
                     if r.status_code != 200:
+                        logger.warning(
+                            "Correlated {} HTTP {}: {}",
+                            sym, r.status_code, r.text[:200],
+                        )
                         continue
                     data = r.json()
+                    if isinstance(data, dict) and data.get("status") == "error":
+                        logger.warning(
+                            "Correlated {} API error: {}",
+                            sym, data.get("message", "?")[:200],
+                        )
+                        continue
                     price = data.get("price")
                     if price is None:
+                        logger.warning("Correlated {} payload has no price: {}", sym, str(data)[:200])
                         continue
                     price = float(price)
                 except Exception as e:
-                    logger.debug("Correlated fetch {} failed: {}", sym, e)
+                    logger.warning("Correlated fetch {} failed: {}", sym, e)
                     continue
                 ts = datetime.utcnow()
                 prev = self._cache.get(sym, {}).get("price")

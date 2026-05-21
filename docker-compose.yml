@@ -56,11 +56,10 @@ services:
     volumes:
       - ./backend:/app
       - charts_data:/app/charts
-    command: >
-      uvicorn app.main:app
-      --host 0.0.0.0
-      --port 8000
-      --reload
+    # Hot-reload (--reload) is opt-in via env var: set UVICORN_RELOAD=1 in .env
+    # for dev. Leave empty in production — --reload spawns file-watcher workers
+    # that can leave zombie asyncio tasks polling external APIs.
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 ${UVICORN_RELOAD:+--reload}"
 
   discord_bot:
     build:

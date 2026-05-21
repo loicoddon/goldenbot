@@ -25,6 +25,7 @@ PriceListener = Callable[[dict[str, Any]], "asyncio.Future[Any] | None"]
 
 class BasePriceFeed(ABC):
     name: str = "base"
+    _restart_delay_s: int = 30
 
     def __init__(self) -> None:
         self._listeners: list[PriceListener] = []
@@ -49,12 +50,39 @@ class BasePriceFeed(ABC):
     async def _run(self) -> None:
         """Backend-specific loop. Must call `_emit` on each tick."""
 
+    async def _supervised_run(self) -> None:
+        """Wrap _run so a clean exit or crash auto-restarts after a delay.
+
+        Without this, a single transient failure (network glitch, quota error,
+        WS server reset) leaves the feed silently dead until manual restart.
+        """
+        while not self._stopping.is_set():
+            try:
+                await self._run()
+                if self._stopping.is_set():
+                    return
+                logger.warning(
+                    "Feed {} loop ended cleanly — restarting in {}s",
+                    self.name, self._restart_delay_s,
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.error(
+                    "Feed {} crashed: {} — restarting in {}s",
+                    self.name, e, self._restart_delay_s,
+                )
+            try:
+                await asyncio.sleep(self._restart_delay_s)
+            except asyncio.CancelledError:
+                raise
+
     async def start(self) -> None:
         if self._task and not self._task.done():
             return
         self._stopping.clear()
-        self._task = asyncio.create_task(self._run(), name=f"feed_{self.name}")
-        logger.info("Feed {} started", self.name)
+        self._task = asyncio.create_task(self._supervised_run(), name=f"feed_{self.name}")
+        logger.info("Feed {} started (supervised, auto-restart on failure)", self.name)
 
     async def stop(self) -> None:
         self._stopping.set()
