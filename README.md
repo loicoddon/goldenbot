@@ -12,13 +12,13 @@
 
 ## ✨ What it does
 
-- 📈 Streams real-time XAU/USD prices (TwelveData WS + OANDA failover)
+- 📈 Streams real-time XAU/USD prices (TwelveData WS + OANDA failover, supervised auto-restart)
 - 🧠 Multiple pluggable strategies: EMA crossover, SMC (order blocks + FVG), Wyckoff (spring/upthrust)
-- 🤖 AI analysis before AND after each trade (Claude API or local Ollama)
-- 📰 Economic calendar + news sentiment (Finnhub)
-- ⚖️ Risk management: leverage (x500 by default), position sizing by lot bounds or risk %, news blackout window, daily loss limit
+- 🤖 AI analysis before AND after each trade (Claude API or local Ollama, with auto-fallback)
+- 📰 Economic calendar + news sentiment (Finnhub, with country whitelist for high-impact classification)
+- ⚖️ Risk management: x500 leverage, confidence-mapped lot sizing, per-session confidence overrides, news blackout window
 - 📊 Backtesting engine with full metrics (Sharpe, Profit Factor, Max DD, Winrate, Expectancy)
-- 🌐 Web dashboard (Next.js) with live chart, trades table, settings, backtest UI
+- 🌐 Mobile-first dashboard (Next.js + Tailwind) — live chart, trades table, settings, backtest UI, bottom-tab nav on phones
 - 💬 Discord notifications on every trade open/close + portfolio snapshot
 - 💾 PostgreSQL persistence — everything survives restarts
 
@@ -219,7 +219,7 @@ TwelveData WS ─▶ tick ($4480.17) ─▶ BarAggregator (60s buckets)
 
 All strategies live in `backend/app/services/strategies/` and follow the same interface:
 
-- **`ema_crossover`** (default) — fast EMA crosses slow EMA + RSI gate + ATR-based SL/TP
+- **`ema_crossover`** (default) — fast EMA crosses slow EMA + RSI gate + ATR-based SL/TP. The confidence formula uses a piecewise mapping on `atr/price` calibrated for high-price assets like gold (typical XAU/USD scalping confidence range: 30-50).
 - **`smc`** — Smart Money Concepts: detects Fair Value Gaps, liquidity sweeps, order blocks
 - **`wyckoff`** — detects range-bound consolidation with spring (false break below) / upthrust (false break above)
 
@@ -251,14 +251,27 @@ Choose with `AI_PROVIDER` in `.env`:
 | Setting | Default | Notes |
 |---------|---------|-------|
 | `leverage` | x500 | retail forex/CFD typical |
-| `risk_per_trade_pct` | 1% | of equity |
+| `risk_per_trade_pct` | 1% | of equity (used when lot bounds are disabled) |
 | `min_lot_size` / `max_lot_size` | 0 / 0 | when > 0, overrides risk % with confidence-mapped lot size |
-| `daily_loss_limit_pct` | 5% | engine auto-stops past this |
-| `max_trades_per_day` | 10 | anti-overtrading |
+| `confidence_for_max_lot` | 60 | confidence value at which size reaches `max_lot_size`. Lower = more aggressive ramp on modest setups (e.g. 50 makes a conf-40 signal use ~67% of the lot range) |
+| `daily_loss_limit_pct` | 5% | engine auto-stops past this. Set very high (9999) to disable in lab mode |
+| `max_trades_per_day` | 10 | anti-overtrading. Set very high to remove the cap |
 | `news_filter_enabled` | true | block ±15min around high-impact events |
+| `news_block_before_min` / `news_block_after_min` | 15 / 15 | minutes of blackout around each high-impact event |
+| `session_min_confidence` | `{}` | per-session confidence override, e.g. `{"asia": 95, "london": 30, "ny": 30}` to choke off Asia thin liquidity |
 | `max_open_positions` | 1 | multi-position cap |
 
-Trades store `notional`, `margin_used`, and `leverage` per row so you can audit exposure.
+Sizing curve (with `min_confidence=20`, `confidence_for_max_lot=60`, `min/max_lot=0.1/0.3`):
+
+| Confidence | Lots |
+|------------|------|
+| 20 | 0.10 |
+| 30 | 0.15 |
+| 40 | 0.20 |
+| 50 | 0.25 |
+| ≥ 60 | 0.30 |
+
+Trades store `notional`, `margin_used`, `leverage`, and the lot quantity (`size / 100`) so you can audit exposure exactly.
 
 ### E. Backtest
 
@@ -288,6 +301,7 @@ The engine reads historical `price_ticks` from your DB — the more your bot has
 ### F. News + economic calendar
 
 - **Finnhub economic calendar** polled every 5 min — CPI, NFP, FOMC, GDP auto-classified as `high` impact
+- **Country whitelist for high-impact**: events are only tagged `high` when they come from a country that actually moves XAU/USD (US, EU/EUR, DE, FR, GB, JP, CN, CH). A "Retail Sales" print from Macau or a Rwanda rate decision is downgraded to `medium`, so the bot doesn't get blocked by irrelevant macro events
 - **Finnhub general news** polled every 2 min, filtered for gold/USD/macro relevance (keyword matching)
 - Live in the dashboard's **News panel** (calendar + headlines, color-coded by impact)
 - High-impact events trigger the **news blackout window**: trades blocked ±15min (configurable)
@@ -319,9 +333,29 @@ curl -X PATCH http://localhost:8001/api/settings \
   -H "Content-Type: application/json" \
   -d '{"min_confidence": 35, "ai_pretrade_enabled": false}'
 
+# Per-session confidence override (block Asia thin-liquidity carnage)
+curl -X PATCH http://localhost:8001/api/settings \
+  -H "Content-Type: application/json" \
+  -d '{"session_min_confidence": {"asia": 95, "london": 30, "ny": 30}}'
+
+# Tune the lot sizing curve aggressiveness
+curl -X PATCH http://localhost:8001/api/settings \
+  -H "Content-Type: application/json" \
+  -d '{"confidence_for_max_lot": 50}'   # lower = more aggressive ramp
+
 # Check the active price feed
 curl http://localhost:8001/api/feed/status
+
+# Force-restart the feed (e.g. after manual quota recovery)
+curl -X POST http://localhost:8001/api/feed/restart
 ```
+
+### Dev mode
+
+The backend runs without `uvicorn --reload` by default — `--reload` was found
+to leave zombie asyncio tasks polling external APIs after each code change.
+To iterate quickly on backend code, set `UVICORN_RELOAD=1` in `.env` and
+`docker compose up -d --force-recreate backend`.
 
 ---
 
