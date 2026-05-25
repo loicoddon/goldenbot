@@ -48,6 +48,7 @@ yarn-error.log*
 
 # Personal infra notes (server/NAS setup, not relevant to repo users)
 NAS.md
+docker-compose.override.yml
 
 # Data / DB / charts
 data/

@@ -65,6 +65,19 @@ HIGH_IMPACT_KEYWORDS = {
     "core pce",
 }
 
+# Only events from these countries/regions actually move XAU/USD.
+# Macau / Rwanda / Singapore PPIs etc. should never blanket-block trades.
+HIGH_IMPACT_COUNTRIES = {
+    "US",          # Fed, Treasury, NFP, CPI — primary driver
+    "EU", "EUR",   # ECB
+    "DE", "FR",    # Largest EU economies
+    "GB", "UK",    # BoE
+    "CN",          # PBoC, Chinese GDP — gold demand giant
+    "JP",          # BoJ — global yen/yield impact
+    "CH",          # SNB — safe-haven correlation
+    "WW", "G7",    # Aggregate / multilateral
+}
+
 
 class NewsFeed:
     def __init__(self) -> None:
@@ -181,10 +194,19 @@ class NewsFeed:
 
         impact_score = ev.get("impact")
         title_lower = title.lower()
-        if any(k in title_lower for k in HIGH_IMPACT_KEYWORDS):
+        country_up = country.upper() if country else ""
+        # High impact requires BOTH a major-event keyword AND a country that
+        # actually moves XAU/USD. Without this, Macau retail sales / Rwanda
+        # rate decisions get blanket-classified high and block real trades.
+        is_keyword = any(k in title_lower for k in HIGH_IMPACT_KEYWORDS)
+        is_relevant_country = country_up in HIGH_IMPACT_COUNTRIES
+        if is_keyword and is_relevant_country:
             impact = "high"
-        elif impact_score in (3, "3", "high", "High"):
+        elif impact_score in (3, "3", "high", "High") and is_relevant_country:
             impact = "high"
+        elif (is_keyword or impact_score in (3, "3", "high", "High")):
+            # Right kind of event but irrelevant country — downgrade
+            impact = "medium"
         elif impact_score in (2, "2", "medium", "Medium"):
             impact = "medium"
         else:

@@ -91,6 +91,7 @@ export default function TradeDetailPage() {
           <Cell label="Exit" value={trade.exit_price?.toFixed(2) ?? '—'} />
           <Cell label="SL" value={trade.stop_loss.toFixed(2)} />
           <Cell label="TP" value={trade.take_profit.toFixed(2)} />
+          <Cell label="Lots" value={(trade.size / 100).toFixed(3)} valueClass="text-gold" />
           <Cell label="Size (oz)" value={trade.size.toFixed(4)} />
           <Cell label="Risk" value={`${trade.risk_amount.toFixed(2)} $`} />
           <Cell label="Leverage" value={`x${trade.leverage}`} />

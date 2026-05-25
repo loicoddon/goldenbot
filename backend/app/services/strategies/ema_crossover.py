@@ -77,11 +77,31 @@ class EmaCrossoverStrategy(BaseStrategy):
         return None
 
     def _confidence(self, fast_ema, slow_ema, r, a, price, direction) -> float:
-        spread = abs(fast_ema - slow_ema) / max(price, 1e-9)
-        spread_score = min(spread * 5000, 40)
+        # Re-calibrated for high-price assets (gold ~$4500): the previous
+        # formula's *10000 factor on atr/price plafonné at ~5/30 for gold
+        # because its relative volatility (~0.04%) is much smaller than
+        # the assumed stock baseline (~0.25%). We now use percent units
+        # with a sigmoid-ish piecewise so atr_score saturates ~30 at the
+        # typical gold scalping volatility.
+        spread_pct = abs(fast_ema - slow_ema) / max(price, 1e-9) * 100  # %
+        # Spread at the crossover is naturally small. Scale generously.
+        spread_score = min(spread_pct * 800, 30)
+
+        atr_pct = a / max(price, 1e-9) * 100  # %
+        # Gold typical 1m ATR ~0.04-0.10%, stocks 0.1-0.5%. Scale gives
+        # decent score on gold low-vol and saturates fast.
+        if atr_pct < 0.02:
+            atr_score = atr_pct / 0.02 * 15
+        elif atr_pct < 0.05:
+            atr_score = 15 + (atr_pct - 0.02) / 0.03 * 15  # 15..30
+        elif atr_pct < 0.10:
+            atr_score = 30 + (atr_pct - 0.05) / 0.05 * 10  # 30..40
+        else:
+            atr_score = 40
+
         if direction == "BUY":
             rsi_score = max(0.0, 40 - abs(r - 55)) / 40 * 30
         else:
             rsi_score = max(0.0, 40 - abs(r - 45)) / 40 * 30
-        atr_score = min(a / max(price, 1e-9) * 10000, 30)
-        return float(min(100.0, spread_score + rsi_score + atr_score))
+
+        return float(min(100.0, spread_score + atr_score + rsi_score))

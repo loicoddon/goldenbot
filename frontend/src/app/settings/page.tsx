@@ -15,6 +15,7 @@ type BotSettings = {
   leverage: number;
   min_lot_size: number;
   max_lot_size: number;
+  confidence_for_max_lot: number;
   ai_analysis_every: number;
   ai_provider: string;
   ai_pretrade_enabled: boolean;
@@ -133,6 +134,15 @@ export default function SettingsPage() {
             max={10}
             step={0.01}
             onChange={(v) => update('max_lot_size', v)}
+          />
+        </Row>
+        <Row label="Confidence for max lot (lower = more aggressive)">
+          <NumberInput
+            value={settings.confidence_for_max_lot}
+            min={10}
+            max={100}
+            step={1}
+            onChange={(v) => update('confidence_for_max_lot', v)}
           />
         </Row>
       </Section>

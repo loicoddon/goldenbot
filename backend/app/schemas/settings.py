@@ -15,6 +15,7 @@ class BotSettingsOut(BaseModel):
     leverage: int
     min_lot_size: float
     max_lot_size: float
+    confidence_for_max_lot: float
     ai_analysis_every: int
     ai_provider: str
     ai_pretrade_enabled: bool
@@ -44,6 +45,7 @@ class BotSettingsUpdate(BaseModel):
     leverage: int | None = Field(default=None, ge=1, le=2000)
     min_lot_size: float | None = Field(default=None, ge=0.0, le=10.0)
     max_lot_size: float | None = Field(default=None, ge=0.0, le=10.0)
+    confidence_for_max_lot: float | None = Field(default=None, ge=10.0, le=100.0)
     ai_analysis_every: int | None = Field(default=None, ge=1, le=100)
     ai_provider: str | None = None
     ai_pretrade_enabled: bool | None = None

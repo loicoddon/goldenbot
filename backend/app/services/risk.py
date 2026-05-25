@@ -105,14 +105,20 @@ class RiskManager:
             return RiskDecision(False, "Invalid stop-loss distance.")
 
         # Lot-bounded sizing takes precedence over risk-based when configured.
-        # Mapping: confidence [min_confidence, 100] -> lots [min, max] (linear).
+        # Mapping: confidence [min_confidence, confidence_for_max_lot] -> lots [min, max] (linear).
+        # confidence_for_max_lot tuning lets us reach max_lot at a realistic
+        # ceiling (e.g. 50-60) instead of an unreachable 100 — effectively an
+        # "exponential" feel on the practical confidence range.
         if (bot_settings.max_lot_size or 0) > 0:
             min_oz = max(0.0, (bot_settings.min_lot_size or 0.0) * 100)
             max_oz = bot_settings.max_lot_size * 100
             if min_oz > max_oz:
                 min_oz, max_oz = max_oz, min_oz
             min_c = float(bot_settings.min_confidence or 0)
-            span = max(1.0, 100.0 - min_c)
+            max_c = float(bot_settings.confidence_for_max_lot or 100)
+            if max_c <= min_c:
+                max_c = min_c + 1.0
+            span = max_c - min_c
             norm = max(0.0, min(1.0, (confidence - min_c) / span))
             size = min_oz + norm * (max_oz - min_oz)
             risk_amount = size * sl_distance

@@ -28,6 +28,10 @@ class BotSettings(Base):
     # interpolation — risk_per_trade_pct is then no longer the binding constraint.
     min_lot_size: Mapped[float] = mapped_column(Float, default=0.0)
     max_lot_size: Mapped[float] = mapped_column(Float, default=0.0)
+    # Confidence value at which size reaches max_lot_size.
+    # With min_confidence=20 and confidence_for_max_lot=50:
+    #   conf 20 → 0.10 lot, conf 35 → 0.20 lot, conf >= 50 → 0.30 lot
+    confidence_for_max_lot: Mapped[float] = mapped_column(Float, default=60.0)
 
     # AI analysis frequency: every N trades (1, 3, 5, 10, 20)
     ai_analysis_every: Mapped[int] = mapped_column(Integer, default=1)
