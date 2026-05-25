@@ -6,6 +6,7 @@ import {
   IChartApi,
   ISeriesApi,
   LineData,
+  LineType,
   Time,
   createChart,
 } from 'lightweight-charts';
@@ -17,7 +18,7 @@ type HistoryRow = { timestamp: string; price: number };
 export function PriceChart() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const seriesRef = useRef<ISeriesApi<'Area'> | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -28,13 +29,36 @@ export function PriceChart() {
         textColor: '#cbd5e1',
       },
       grid: {
-        vertLines: { color: '#1B2235' },
-        horzLines: { color: '#1B2235' },
+        vertLines: { color: 'rgba(27, 34, 53, 0.3)' },
+        horzLines: { color: 'rgba(27, 34, 53, 0.5)' },
       },
-      timeScale: { timeVisible: true, secondsVisible: true },
-      rightPriceScale: { borderColor: '#1B2235' },
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+        borderColor: 'rgba(27, 34, 53, 0.5)',
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(27, 34, 53, 0.5)',
+        scaleMargins: { top: 0.1, bottom: 0.1 },
+      },
+      crosshair: {
+        mode: 1,
+        vertLine: { color: 'rgba(255, 215, 0, 0.3)', labelBackgroundColor: '#B8860B' },
+        horzLine: { color: 'rgba(255, 215, 0, 0.3)', labelBackgroundColor: '#B8860B' },
+      },
     });
-    const series = chart.addLineSeries({ color: '#FFD700', lineWidth: 2 });
+    const series = chart.addAreaSeries({
+      lineColor: '#FFD700',
+      topColor: 'rgba(255, 215, 0, 0.35)',
+      bottomColor: 'rgba(255, 215, 0, 0.0)',
+      lineWidth: 2,
+      lineType: LineType.Curved,
+      priceLineColor: 'rgba(255, 215, 0, 0.6)',
+      priceLineStyle: 2,
+      priceLineWidth: 1,
+      crosshairMarkerBorderColor: '#FFD700',
+      crosshairMarkerBackgroundColor: '#FFE066',
+    });
     chartRef.current = chart;
     seriesRef.current = series;
 
