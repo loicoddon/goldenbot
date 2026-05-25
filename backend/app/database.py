@@ -56,6 +56,8 @@ async def init_db() -> None:
             "ALTER TABLE bot_settings ADD COLUMN IF NOT EXISTS min_lot_size FLOAT DEFAULT 0",
             "ALTER TABLE bot_settings ADD COLUMN IF NOT EXISTS max_lot_size FLOAT DEFAULT 0",
             "ALTER TABLE bot_settings ADD COLUMN IF NOT EXISTS confidence_for_max_lot FLOAT DEFAULT 60",
+            "ALTER TABLE bot_settings ADD COLUMN IF NOT EXISTS confidence_skip_low FLOAT DEFAULT 0",
+            "ALTER TABLE bot_settings ADD COLUMN IF NOT EXISTS confidence_skip_high FLOAT DEFAULT 0",
         ]
         for sql in migrations:
             await conn.execute(text(sql))

@@ -254,6 +254,7 @@ Choose with `AI_PROVIDER` in `.env`:
 | `risk_per_trade_pct` | 1% | of equity (used when lot bounds are disabled) |
 | `min_lot_size` / `max_lot_size` | 0 / 0 | when > 0, overrides risk % with confidence-mapped lot size |
 | `confidence_for_max_lot` | 60 | confidence value at which size reaches `max_lot_size`. Lower = more aggressive ramp on modest setups (e.g. 50 makes a conf-40 signal use ~67% of the lot range) |
+| `confidence_skip_low` / `confidence_skip_high` | 0 / 0 | when `skip_high > skip_low`, signals whose confidence falls in `[skip_low, skip_high]` are rejected. Use when an empirically toxic confidence band is identified (a real example: this account's `[35, 45]` bucket had 23% winrate vs 55% in `[25, 35]`, so skipping it surgically beats raising `min_confidence`) |
 | `daily_loss_limit_pct` | 5% | engine auto-stops past this. Set very high (9999) to disable in lab mode |
 | `max_trades_per_day` | 10 | anti-overtrading. Set very high to remove the cap |
 | `news_filter_enabled` | true | block ±15min around high-impact events |

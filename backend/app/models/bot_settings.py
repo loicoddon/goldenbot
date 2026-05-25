@@ -32,6 +32,12 @@ class BotSettings(Base):
     # With min_confidence=20 and confidence_for_max_lot=50:
     #   conf 20 → 0.10 lot, conf 35 → 0.20 lot, conf >= 50 → 0.30 lot
     confidence_for_max_lot: Mapped[float] = mapped_column(Float, default=60.0)
+    # Reject signals whose confidence falls in [skip_low, skip_high] when
+    # skip_high > skip_low. Useful when an empirically toxic confidence
+    # bucket is identified (e.g. 35-45 historically wins less than 25-35).
+    # 0/0 = disabled (no skip range).
+    confidence_skip_low: Mapped[float] = mapped_column(Float, default=0.0)
+    confidence_skip_high: Mapped[float] = mapped_column(Float, default=0.0)
 
     # AI analysis frequency: every N trades (1, 3, 5, 10, 20)
     ai_analysis_every: Mapped[int] = mapped_column(Integer, default=1)

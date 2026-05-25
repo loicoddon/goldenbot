@@ -42,6 +42,15 @@ class RiskManager:
         if not bot_settings.enabled:
             return RiskDecision(False, "Bot is disabled.")
 
+        # Confidence skip range — reject signals in an empirically toxic band.
+        skip_lo = float(bot_settings.confidence_skip_low or 0)
+        skip_hi = float(bot_settings.confidence_skip_high or 0)
+        if skip_hi > skip_lo and skip_lo <= confidence <= skip_hi:
+            return RiskDecision(
+                False,
+                f"Confidence {confidence:.1f} in skip range [{skip_lo:.0f}, {skip_hi:.0f}].",
+            )
+
         # Multi-position cap: respect per-strategy/per-bot limit.
         max_open = max(1, bot_settings.max_open_positions)
         open_count = await session.scalar(
