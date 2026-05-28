@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 
 import httpx
 import websockets
@@ -25,6 +26,10 @@ REST_URL = "https://api.twelvedata.com/price"
 class TwelveDataFeed(BasePriceFeed):
     name = "twelvedata"
 
+    # REST fallback runs for at most this long, then _run returns so the
+    # supervisor restarts it and we retry the (quota-free) WebSocket.
+    REST_FALLBACK_WINDOW_S = 300
+
     async def _run(self) -> None:
         if not settings.twelvedata_api_key:
             logger.warning("TWELVEDATA_API_KEY missing — running in MOCK mode")
@@ -35,6 +40,12 @@ class TwelveDataFeed(BasePriceFeed):
         except Exception as e:
             logger.warning("TwelveData WS ended ({}), falling back to REST polling", e)
             await self._rest_poll_loop()
+        # _run returns here on either WS or REST exit. The supervised wrapper
+        # in BasePriceFeed restarts _run() after a short delay, so we always
+        # cycle back to attempting the WebSocket (which doesn't consume the
+        # daily REST quota). Previously the REST loop was infinite, leaving
+        # the feed permanently in REST mode burning quota even after WS
+        # service recovered.
 
     async def _ws_loop(self) -> None:
         url = WS_URL.format(api_key=settings.twelvedata_api_key)
@@ -73,8 +84,14 @@ class TwelveDataFeed(BasePriceFeed):
     async def _rest_poll_loop(self) -> None:
         symbol = settings.twelvedata_symbol
         interval = max(settings.twelvedata_poll_interval, 1.0)
+        started = time.monotonic()
         async with httpx.AsyncClient(timeout=10) as client:
             while not self._stopping.is_set():
+                # Time-box the REST window so _run() returns and the supervisor
+                # retries the WebSocket (which doesn't burn the REST quota).
+                if time.monotonic() - started > self.REST_FALLBACK_WINDOW_S:
+                    logger.info("REST window elapsed — returning to retry WebSocket")
+                    return
                 try:
                     r = await client.get(
                         REST_URL,
@@ -91,8 +108,13 @@ class TwelveDataFeed(BasePriceFeed):
                         code = data.get("code", "?")
                         msg = str(data.get("message", ""))[:200]
                         logger.warning("TwelveData REST API error code={} msg={}", code, msg)
-                        # Long backoff on quota, shorter on transient errors
-                        await asyncio.sleep(60 if code == 429 else 10)
+                        if code == 429:
+                            # Quota exhausted — REST is useless until reset, but
+                            # the WS doesn't need the REST quota. Bail immediately
+                            # so the supervisor retries WS instead of spinning here.
+                            logger.info("REST quota exhausted — returning to retry WebSocket")
+                            return
+                        await asyncio.sleep(10)
                         continue
                     if "price" in data:
                         await self._emit(float(data["price"]))
